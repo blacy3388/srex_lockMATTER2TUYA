@@ -7,9 +7,9 @@ cd "$PROJECT_DIR"
 rm -rf build release
 mkdir -p release
 
-idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.c6_thread" set-target esp32c6
+idf.py -D SDKCONFIG_DEFAULTS=sdkconfig.defaults.c6_thread set-target esp32c6
 idf.py build
-idf.py merge-bin -o build/srex-c6-matter-thread-lock-merged.bin -f raw
+idf.py merge-bin -o srex-c6-matter-thread-lock-merged.bin -f raw
 
 cp build/flasher_args.json release/
 cp build/flash_args release/

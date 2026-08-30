@@ -6,17 +6,14 @@ if(NOT DEFINED ENV{ESP_MATTER_PATH})
     message(FATAL_ERROR "ESP_MATTER_PATH environment variable is not set")
 endif()
 
-set(ESP_MATTER_PATH $ENV{ESP_MATTER_PATH})
+set(ESP_MATTER_PATH "$ENV{ESP_MATTER_PATH}")
 set(MATTER_SDK_PATH "${ESP_MATTER_PATH}/connectedhomeip/connectedhomeip")
 
-include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-include(${ESP_MATTER_PATH}/examples/common/cmake_common/components_include.cmake)
+include("$ENV{IDF_PATH}/tools/cmake/project.cmake")
 
 set(EXTRA_COMPONENT_DIRS
-    "${ESP_MATTER_PATH}/examples/common"
     "${MATTER_SDK_PATH}/config/esp32/components"
     "${ESP_MATTER_PATH}/components"
-    ${extra_components_dirs_append}
 )
 
 project(srex_c6_matter_thread_lock)

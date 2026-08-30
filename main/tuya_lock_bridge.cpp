@@ -26,10 +26,10 @@ static constexpr int LOCK_BAUD = 115200;
 
 static constexpr uint16_t WAKE_SEQUENCE = 0x55AA;
 static constexpr int MAX_WAKE_ATTEMPTS = 3;
-static constexpr int64_t WAKE_TIMEOUT_US = 70000;       // 70 ms
-static constexpr int64_t CMD_ACK_TIMEOUT_US = 1200000; // 1.2 s
-static constexpr int64_t DP_RESULT_TIMEOUT_US = 7000000;
-static constexpr int64_t MOTOR_TIMEOUT_US = 12000000;
+static constexpr uint32_t WAKE_TIMEOUT_MS = 70;
+static constexpr uint32_t CMD_ACK_TIMEOUT_MS = 1200;
+static constexpr uint32_t DP_RESULT_TIMEOUT_MS = 7000;
+static constexpr uint32_t MOTOR_TIMEOUT_MS = 12000;
 
 static const uint8_t REMOTE_KEY[8] = {0x12, 0x34, 0x56, 0x78, 0x90, 0x12, 0x34, 0x56};
 static constexpr uint16_t REMOTE_KEY_ID = 0x0001;
@@ -51,7 +51,7 @@ static std::atomic<Stage> s_stage{Stage::Idle};
 static uint16_t s_tx_seq = 1;
 static uint16_t s_active_seq = 0;
 static std::atomic<int> s_wake_attempt{0};
-static std::atomic<int64_t> s_stage_started{0};
+static std::atomic<uint32_t> s_stage_started_ms{0};
 static std::atomic<bool> s_key_provisioned{false};
 static std::atomic<bool> s_pending_unlock{false};
 
@@ -60,6 +60,11 @@ static void *s_state_ctx = nullptr;
 
 static uint8_t s_rx[512];
 static size_t s_rx_len = 0;
+
+static uint32_t monotonic_ms()
+{
+    return static_cast<uint32_t>(esp_timer_get_time() / 1000);
+}
 
 static uint8_t checksum(const uint8_t *data, size_t len)
 {
@@ -133,7 +138,7 @@ static void send_wake()
     print_hex("TX RAW -> LOCK: ", wake, sizeof(wake));
     uart_write_bytes(LOCK_UART, wake, sizeof(wake));
     uart_wait_tx_done(LOCK_UART, pdMS_TO_TICKS(100));
-    s_stage_started = esp_timer_get_time();
+    s_stage_started_ms = monotonic_ms();
 }
 
 static void send_cmd00_ack(uint16_t seq)
@@ -197,7 +202,7 @@ static void send_dp48()
     ESP_LOGI(TAG, "DP48 provision remote key");
     s_active_seq = send_dp(0x30, 0x00, data, sizeof(data));
     s_stage = Stage::WaitDp48CmdAck;
-    s_stage_started = esp_timer_get_time();
+    s_stage_started_ms = monotonic_ms();
 }
 
 static void send_dp49_unlock()
@@ -213,7 +218,7 @@ static void send_dp49_unlock()
     ESP_LOGI(TAG, "DP49 remote unlock");
     s_active_seq = send_dp(0x31, 0x00, data, sizeof(data));
     s_stage = Stage::WaitDp49CmdAck;
-    s_stage_started = esp_timer_get_time();
+    s_stage_started_ms = monotonic_ms();
 }
 
 static void send_dp57_lock()
@@ -222,7 +227,7 @@ static void send_dp57_lock()
     ESP_LOGI(TAG, "DP57 lock");
     s_active_seq = send_dp(0x39, 0x01, &v, 1);
     s_stage = Stage::WaitLockCmdAck;
-    s_stage_started = esp_timer_get_time();
+    s_stage_started_ms = monotonic_ms();
 }
 
 static void report_lock_state(bool locked)
@@ -310,7 +315,7 @@ static void process_cmd04_ack(uint16_t seq, const uint8_t *payload, uint16_t pay
     } else if (s_stage == Stage::WaitLockCmdAck) {
         s_stage = Stage::WaitLockResult;
     }
-    s_stage_started = esp_timer_get_time();
+    s_stage_started_ms = monotonic_ms();
 }
 
 static void process_frame(const uint8_t *frame, size_t total)
@@ -391,10 +396,10 @@ static void handle_timeouts()
 {
     Stage st = s_stage;
     if (st == Stage::Idle) return;
-    int64_t elapsed = esp_timer_get_time() - s_stage_started;
+    const uint32_t elapsed_ms = monotonic_ms() - s_stage_started_ms.load();
 
     if (st == Stage::WaitWakeProvision || st == Stage::WaitWakeUnlock || st == Stage::WaitWakeLock) {
-        if (elapsed > WAKE_TIMEOUT_US) {
+        if (elapsed_ms > WAKE_TIMEOUT_MS) {
             if (s_wake_attempt < MAX_WAKE_ATTEMPTS) send_wake();
             else {
                 ESP_LOGE(TAG, "Wake failed");
@@ -406,7 +411,7 @@ static void handle_timeouts()
     }
 
     if (st == Stage::WaitDp48CmdAck || st == Stage::WaitDp49CmdAck || st == Stage::WaitLockCmdAck) {
-        if (elapsed > CMD_ACK_TIMEOUT_US) {
+        if (elapsed_ms > CMD_ACK_TIMEOUT_MS) {
             ESP_LOGE(TAG, "CMD04 ACK timeout");
             s_stage = Stage::Idle;
             s_pending_unlock = false;
@@ -414,14 +419,14 @@ static void handle_timeouts()
         return;
     }
 
-    if (st == Stage::WaitDp48Result && elapsed > DP_RESULT_TIMEOUT_US) {
+    if (st == Stage::WaitDp48Result && elapsed_ms > DP_RESULT_TIMEOUT_MS) {
         ESP_LOGE(TAG, "DP48 result timeout");
         s_stage = Stage::Idle;
         s_pending_unlock = false;
         return;
     }
 
-    if ((st == Stage::WaitUnlockResult || st == Stage::WaitLockResult) && elapsed > MOTOR_TIMEOUT_US) {
+    if ((st == Stage::WaitUnlockResult || st == Stage::WaitLockResult) && elapsed_ms > MOTOR_TIMEOUT_MS) {
         ESP_LOGE(TAG, "Motor/state result timeout");
         s_stage = Stage::Idle;
         s_pending_unlock = false;
