@@ -3,24 +3,54 @@ name: Build ESP32-C6 Matter Thread Lock
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Build with official Espressif ESP-Matter image
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show repository files
+        run: |
+          echo "===== CURRENT DIRECTORY ====="
+          pwd
+
+          echo "===== ROOT FILES ====="
+          ls -la
+
+          echo "===== BUILD SCRIPT ====="
+          file build_release.sh || true
+          ls -la build_release.sh || true
+
+      - name: Build ESP32-C6 Matter firmware
         run: |
           docker run --rm \
             -v "$PWD:/project" \
             -w /project \
             espressif/esp-matter:latest \
-            bash -lc 'bash ./build_release.sh'
+            bash -lc '
+              echo "===== INSIDE CONTAINER ====="
+              pwd
+              ls -la
+              echo "===== START BUILD ====="
+              bash /project/build_release.sh
+            '
+
+      - name: Show generated firmware
+        run: |
+          echo "===== RELEASE FILES ====="
+          find release -type f -maxdepth 2 -print || true
+
+          echo "===== BUILD BIN FILES ====="
+          find build -name "*.bin" -type f -print || true
 
       - name: Upload Launchpad firmware
         uses: actions/upload-artifact@v4
         with:
           name: srex-c6-matter-thread-lock-launchpad
           path: release/
+          if-no-files-found: error
