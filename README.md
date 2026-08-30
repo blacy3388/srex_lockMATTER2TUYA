@@ -33,10 +33,10 @@ The project deliberately uses UART1 on GPIO6/GPIO7 so the board's native USB con
 Install Docker, then from this folder run:
 
 ```bash
-./build_with_docker.sh
+bash ./build_with_docker.sh
 ```
 
-The official `espressif/esp-matter:latest` image contains ESP-IDF and ESP-Matter.
+The official `espressif/esp-matter:release-v1.6` image contains compatible ESP-IDF and ESP-Matter versions. The image is pinned to keep local and CI builds reproducible.
 
 Output:
 

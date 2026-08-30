@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-docker run --rm -it \
+docker run --rm \
   -v "$PWD:/project" \
   -w /project \
-  espressif/esp-matter:latest \
-  bash -lc './build_release.sh'
+  espressif/esp-matter:release-v1.6 \
+  bash ./build_release.sh

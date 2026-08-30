@@ -1,5 +1,8 @@
 #include "tuya_lock_bridge.h"
 
+#include <atomic>
+#include <inttypes.h>
+#include <stdio.h>
 #include <string.h>
 #include <time.h>
 
@@ -44,13 +47,13 @@ enum class Stage : uint8_t {
     WaitLockResult,
 };
 
-static volatile Stage s_stage = Stage::Idle;
+static std::atomic<Stage> s_stage{Stage::Idle};
 static uint16_t s_tx_seq = 1;
 static uint16_t s_active_seq = 0;
-static int s_wake_attempt = 0;
-static int64_t s_stage_started = 0;
-static bool s_key_provisioned = false;
-static bool s_pending_unlock = false;
+static std::atomic<int> s_wake_attempt{0};
+static std::atomic<int64_t> s_stage_started{0};
+static std::atomic<bool> s_key_provisioned{false};
+static std::atomic<bool> s_pending_unlock{false};
 
 static tuya_lock_state_cb_t s_state_cb = nullptr;
 static void *s_state_ctx = nullptr;
@@ -125,8 +128,8 @@ static void send_wake()
         0,0,0,0,0,0,0,
         0x55,0xAA,0x03,0x55,0xAA,0x00,0x00,0x00,0x01
     };
-    ++s_wake_attempt;
-    ESP_LOGI(TAG, "Wake attempt %d/%d", s_wake_attempt, MAX_WAKE_ATTEMPTS);
+    const int attempt = ++s_wake_attempt;
+    ESP_LOGI(TAG, "Wake attempt %d/%d", attempt, MAX_WAKE_ATTEMPTS);
     print_hex("TX RAW -> LOCK: ", wake, sizeof(wake));
     uart_write_bytes(LOCK_UART, wake, sizeof(wake));
     uart_wait_tx_done(LOCK_UART, pdMS_TO_TICKS(100));
@@ -449,11 +452,17 @@ extern "C" esp_err_t tuya_lock_bridge_init(tuya_lock_state_cb_t cb, void *ctx)
     cfg.flow_ctrl = UART_HW_FLOWCTRL_DISABLE;
     cfg.source_clk = UART_SCLK_DEFAULT;
 
-    ESP_ERROR_CHECK(uart_param_config(LOCK_UART, &cfg));
-    ESP_ERROR_CHECK(uart_set_pin(LOCK_UART, LOCK_TX_GPIO, LOCK_RX_GPIO, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
-    ESP_ERROR_CHECK(uart_driver_install(LOCK_UART, 4096, 0, 0, nullptr, 0));
+    esp_err_t err = uart_param_config(LOCK_UART, &cfg);
+    if (err != ESP_OK) return err;
+    err = uart_set_pin(LOCK_UART, LOCK_TX_GPIO, LOCK_RX_GPIO, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    if (err != ESP_OK) return err;
+    err = uart_driver_install(LOCK_UART, 4096, 0, 0, nullptr, 0);
+    if (err != ESP_OK) return err;
 
-    if (xTaskCreate(uart_task, "tuya_uart", 6144, nullptr, 5, nullptr) != pdPASS) return ESP_ERR_NO_MEM;
+    if (xTaskCreate(uart_task, "tuya_uart", 6144, nullptr, 5, nullptr) != pdPASS) {
+        uart_driver_delete(LOCK_UART);
+        return ESP_ERR_NO_MEM;
+    }
     ESP_LOGI(TAG, "Tuya UART ready: RX GPIO%d, TX GPIO%d @ %d", LOCK_RX_GPIO, LOCK_TX_GPIO, LOCK_BAUD);
     return ESP_OK;
 }

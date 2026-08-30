@@ -6,27 +6,21 @@ mkdir -p release
 
 idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.c6_thread" set-target esp32c6
 idf.py build
+idf.py merge-bin -o build/srex-c6-matter-thread-lock-merged.bin -f raw
 
 cp build/flasher_args.json release/
 cp build/flash_args release/
 cp build/bootloader/bootloader.bin release/
 cp build/partition_table/partition-table.bin release/
-cp build/*.bin release/ 2>/dev/null || true
+cp build/srex_c6_matter_thread_lock.bin release/
+cp build/srex-c6-matter-thread-lock-merged.bin release/
 
-cd build
-APP_BIN=$(python - <<'PY'
-import json
-with open('project_description.json') as f:
-    print(json.load(f)['app_bin'])
-PY
-)
-if command -v esptool.py >/dev/null 2>&1; then
-  ESPTOOL=esptool.py
-else
-  ESPTOOL=esptool
-fi
-$ESPTOOL --chip esp32c6 merge_bin -o ../release/srex-c6-matter-thread-lock-merged.bin $(cat flash_args | tr '\n' ' ')
-cd ..
+{
+  printf 'ESP-IDF: '
+  git -C "$IDF_PATH" rev-parse HEAD
+  printf 'ESP-Matter: '
+  git -C "$ESP_MATTER_PATH" rev-parse HEAD
+} > release/build-versions.txt
 
 echo
 echo "READY FOR ESP LAUNCHPAD DIY:"

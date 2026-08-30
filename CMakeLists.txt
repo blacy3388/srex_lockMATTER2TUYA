@@ -1,22 +1,23 @@
-cmake_minimum_required(VERSION 3.5)
-
-if(NOT DEFINED ENV{ESP_MATTER_PATH})
-    message(FATAL_ERROR "ESP_MATTER_PATH is not set. Use Espressif's esp-matter environment or Docker image.")
-endif()
+cmake_minimum_required(VERSION 3.16)
 
 set(PROJECT_VER "1.0.0")
-set(PROJECT_VER_NUMBER 1)
+
+if(NOT DEFINED ENV{ESP_MATTER_PATH})
+    message(FATAL_ERROR "ESP_MATTER_PATH environment variable is not set")
+endif()
 
 set(ESP_MATTER_PATH $ENV{ESP_MATTER_PATH})
-set(MATTER_SDK_PATH ${ESP_MATTER_PATH}/connectedhomeip/connectedhomeip)
+set(MATTER_SDK_PATH "${ESP_MATTER_PATH}/connectedhomeip/connectedhomeip")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+include(${ESP_MATTER_PATH}/examples/common/cmake_common/components_include.cmake)
 
 set(EXTRA_COMPONENT_DIRS
     "${ESP_MATTER_PATH}/examples/common"
     "${MATTER_SDK_PATH}/config/esp32/components"
     "${ESP_MATTER_PATH}/components"
-    ${extra_components_dirs_append})
+    ${extra_components_dirs_append}
+)
 
 project(srex_c6_matter_thread_lock)
 
