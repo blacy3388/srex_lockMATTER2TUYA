@@ -6,6 +6,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "driver/gpio.h"
 #include "driver/uart.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -196,7 +197,8 @@ static void send_dp48()
     data[3] = valid_from >> 24; data[4] = valid_from >> 16; data[5] = valid_from >> 8; data[6] = valid_from;
     data[7] = valid_to >> 24; data[8] = valid_to >> 16; data[9] = valid_to >> 8; data[10] = valid_to;
     const uint16_t max_uses = 1000;
-    data[11] = max_uses >> 8; data[12] = max_uses;
+    data[11] = static_cast<uint8_t>(max_uses >> 8);
+    data[12] = static_cast<uint8_t>(max_uses);
     memcpy(&data[13], REMOTE_KEY, sizeof(REMOTE_KEY));
 
     ESP_LOGI(TAG, "DP48 provision remote key");
