@@ -1,4 +1,4 @@
-name: Build ESP32-C6 Matter Thread Lock
+name: Build ESP32-C6 Matter Thread LockV2
 
 on:
   workflow_dispatch:
@@ -14,39 +14,39 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Show repository files
+      - name: Check repository
         run: |
-          echo "===== CURRENT DIRECTORY ====="
+          echo "===== GITHUB WORKSPACE ====="
+          echo "$GITHUB_WORKSPACE"
           pwd
-
-          echo "===== ROOT FILES ====="
           ls -la
-
-          echo "===== BUILD SCRIPT ====="
-          file build_release.sh || true
-          ls -la build_release.sh || true
 
       - name: Build ESP32-C6 Matter firmware
         run: |
           docker run --rm \
-            -v "$PWD:/project" \
-            -w /project \
+            -v "${GITHUB_WORKSPACE}:/project" \
             espressif/esp-matter:latest \
             bash -lc '
-              echo "===== INSIDE CONTAINER ====="
+              echo "===== ESP-MATTER ENVIRONMENT ====="
+              echo "IDF_PATH=$IDF_PATH"
+              echo "ESP_MATTER_PATH=$ESP_MATTER_PATH"
+
+              echo "===== SWITCH TO OUR PROJECT ====="
+              cd /project
               pwd
               ls -la
-              echo "===== START BUILD ====="
+
+              echo "===== BUILD ====="
               bash /project/build_release.sh
             '
 
       - name: Show generated firmware
         run: |
-          echo "===== RELEASE FILES ====="
-          find release -type f -maxdepth 2 -print || true
+          echo "===== RELEASE ====="
+          find release -maxdepth 2 -type f -print || true
 
-          echo "===== BUILD BIN FILES ====="
-          find build -name "*.bin" -type f -print || true
+          echo "===== BINARIES ====="
+          find build -maxdepth 3 -type f -name "*.bin" -print || true
 
       - name: Upload Launchpad firmware
         uses: actions/upload-artifact@v4
