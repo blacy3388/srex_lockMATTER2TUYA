@@ -49,8 +49,9 @@ enum class Stage : uint8_t {
 };
 
 static std::atomic<Stage> s_stage{Stage::Idle};
-static uint16_t s_tx_seq = 1;
-static uint16_t s_active_seq = 0;
+// Use naturally aligned 32-bit atomics; only the low 16 bits are sent on the wire.
+static std::atomic<uint32_t> s_tx_seq{1};
+static std::atomic<uint32_t> s_active_seq{0};
 static std::atomic<int> s_wake_attempt{0};
 static std::atomic<uint32_t> s_stage_started_ms{0};
 static std::atomic<bool> s_key_provisioned{false};
@@ -76,9 +77,12 @@ static uint8_t checksum(const uint8_t *data, size_t len)
 
 static uint16_t next_seq()
 {
-    uint16_t out = s_tx_seq++;
-    if (s_tx_seq == 0 || s_tx_seq == WAKE_SEQUENCE) ++s_tx_seq;
-    return out;
+    // 0x55AA is reserved by the lock's wake handshake, so never use it for
+    // normal frames even when the sequence counter wraps.
+    for (;;) {
+        const uint16_t out = static_cast<uint16_t>(s_tx_seq.fetch_add(1));
+        if (out != 0 && out != WAKE_SEQUENCE) return out;
+    }
 }
 
 static void print_hex(const char *prefix, const uint8_t *data, size_t len)
@@ -302,7 +306,7 @@ static void decode_dps(const uint8_t *payload, uint16_t payload_len)
 
 static void process_cmd04_ack(uint16_t seq, const uint8_t *payload, uint16_t payload_len)
 {
-    if (payload_len != 1 || seq != s_active_seq) return;
+    if (payload_len != 1 || seq != static_cast<uint16_t>(s_active_seq.load())) return;
     ESP_LOGI(TAG, "CMD04 ACK result=0x%02X", payload[0]);
     if (payload[0] != 0) {
         s_stage = Stage::Idle;
@@ -476,13 +480,14 @@ extern "C" esp_err_t tuya_lock_bridge_init(tuya_lock_state_cb_t cb, void *ctx)
 
 extern "C" bool tuya_lock_request_unlock(void)
 {
-    if (s_stage != Stage::Idle) {
+    const Stage requested_stage = s_key_provisioned ? Stage::WaitWakeUnlock : Stage::WaitWakeProvision;
+    Stage expected_stage = Stage::Idle;
+    if (!s_stage.compare_exchange_strong(expected_stage, requested_stage)) {
         ESP_LOGW(TAG, "Unlock rejected: bridge busy");
         return false;
     }
     s_pending_unlock = true;
     s_wake_attempt = 0;
-    s_stage = s_key_provisioned ? Stage::WaitWakeUnlock : Stage::WaitWakeProvision;
     ESP_LOGI(TAG, "Matter request => UNLOCK%s", s_key_provisioned ? "" : " (provision DP48 first)");
     send_wake();
     return true;
@@ -490,13 +495,13 @@ extern "C" bool tuya_lock_request_unlock(void)
 
 extern "C" bool tuya_lock_request_lock(void)
 {
-    if (s_stage != Stage::Idle) {
+    Stage expected_stage = Stage::Idle;
+    if (!s_stage.compare_exchange_strong(expected_stage, Stage::WaitWakeLock)) {
         ESP_LOGW(TAG, "Lock rejected: bridge busy");
         return false;
     }
     s_pending_unlock = false;
     s_wake_attempt = 0;
-    s_stage = Stage::WaitWakeLock;
     ESP_LOGI(TAG, "Matter request => LOCK");
     send_wake();
     return true;
