@@ -1,0 +1,9 @@
+Command: cmake -G Ninja -DPYTHON_DEPS_CHECKED=1 -DPYTHON=C:\Espressif\python_env\idf5.5_py3.11_env\Scripts\python.exe -DESP_PLATFORM=1 -DSDKCONFIG_DEFAULTS=sdkconfig.defaults.c6_thread -DIDF_TARGET=esp32c6 -DCCACHE_ENABLE=0 C:\Users\Laz Dell\OneDrive - The Open University\Documents\Arduino\srex_c6_matter_thread_lock_project2TUYA\srex_c6_matter_thread_lock
+-- Found Git: C:/Program Files/Git/cmd/git.exe (found version "2.34.1.windows.1")
+-- Minimal build - OFF
+-- The C compiler identification is unknown
+-- The CXX compiler identification is unknown
+-- The ASM compiler identification is unknown
+-- Found assembler: riscv32-esp-elf-gcc
+-- Warning: Did not find file Compiler/-ASM
+-- Configuring incomplete, errors occurred!
