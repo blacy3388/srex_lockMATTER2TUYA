@@ -5,4 +5,4 @@ docker run --rm \
   -v "$PWD:/project" \
   -w /project \
   espressif/esp-matter:release-v1.6 \
-  bash ./build_release.sh
+  bash /project/build_release.sh
