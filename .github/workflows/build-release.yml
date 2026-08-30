@@ -1,0 +1,26 @@
+name: Build ESP32-C6 Matter Thread Lock
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build with official Espressif ESP-Matter image
+        run: |
+          docker run --rm \
+            -v "$PWD:/project" \
+            -w /project \
+            espressif/esp-matter:latest \
+            bash -lc './build_release.sh'
+
+      - name: Upload Launchpad firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: srex-c6-matter-thread-lock-launchpad
+          path: release/
