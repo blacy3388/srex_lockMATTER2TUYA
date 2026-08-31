@@ -18,11 +18,15 @@ The project deliberately uses UART1 on GPIO6/GPIO7 so the board's native USB con
 
 - Matter Door Lock device over Thread
 - BLE commissioning + OpenThread networking
+- Matter user management with persistent users and PIN credentials
+- Matter Power Source child endpoint with battery percentage from Tuya DP10
+- Configurable auto-relock attribute
 - Tuya wake sequence with fixed 0x55AA sequence
 - CMD00 / CMD05 / CMD23 acknowledgements
 - CMD24 time response
 - CMD04 acknowledgement processing
 - DP47 and DP57 physical lock-state tracking
+- DP10 battery-level reporting
 - DP48 remote-key provisioning
 - DP49 remote unlock
 - DP57 remote lock
@@ -68,6 +72,12 @@ Download the `srex-c6-matter-thread-lock-launchpad` artifact and flash the merge
 ## Matter commissioning
 
 After flashing, connect to the USB serial console. The Matter stack prints commissioning information during boot. Add the device to Home Assistant through its Matter integration and an existing Thread Border Router.
+
+After installing a build that changes the Matter endpoint/cluster layout, factory-reset the device and commission it again. Existing controllers cache the old descriptor and will not reliably discover newly added features.
+
+User and PIN management uses the standard Matter Door Lock commands and is stored in NVS. Whether a controller displays a user-management screen depends on that controller; the feature can also be managed with `chip-tool` or another Matter administrator.
+
+Battery percentage is reported by the lock as Tuya DP10 and exposed using the Matter Power Source cluster. Matter uses half-percent units internally, so a Tuya value of 75 is published as 150 and displayed by controllers as 75%.
 
 ## Factory reset
 

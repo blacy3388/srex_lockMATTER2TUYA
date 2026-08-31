@@ -58,6 +58,7 @@ static std::atomic<bool> s_key_provisioned{false};
 static std::atomic<bool> s_pending_unlock{false};
 
 static tuya_lock_state_cb_t s_state_cb = nullptr;
+static tuya_lock_battery_cb_t s_battery_cb = nullptr;
 static void *s_state_ctx = nullptr;
 
 static uint8_t s_rx[512];
@@ -274,7 +275,10 @@ static void decode_dps(const uint8_t *payload, uint16_t payload_len)
         ESP_LOGI(TAG, "DP%u (0x%02X) type=0x%02X len=%u", dp, dp, type, len);
 
         if (dp == 10 && type == 0x02 && len == 4) {
-            ESP_LOGI(TAG, "Battery=%" PRIu32 "%%", read_be32(value));
+            uint32_t raw_percent = read_be32(value);
+            uint8_t percent = static_cast<uint8_t>(raw_percent > 100 ? 100 : raw_percent);
+            ESP_LOGI(TAG, "Battery=%u%%", percent);
+            if (s_battery_cb) s_battery_cb(percent, s_state_ctx);
         } else if (dp == 47 && len == 1) {
             report_lock_state(value[0] != 0);
         } else if (dp == 57 && type == 0x01 && len == 1) {
@@ -450,9 +454,12 @@ static void uart_task(void *)
     }
 }
 
-extern "C" esp_err_t tuya_lock_bridge_init(tuya_lock_state_cb_t cb, void *ctx)
+extern "C" esp_err_t tuya_lock_bridge_init(tuya_lock_state_cb_t state_cb,
+                                             tuya_lock_battery_cb_t battery_cb,
+                                             void *ctx)
 {
-    s_state_cb = cb;
+    s_state_cb = state_cb;
+    s_battery_cb = battery_cb;
     s_state_ctx = ctx;
 
     uart_config_t cfg = {};
