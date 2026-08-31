@@ -37,7 +37,9 @@ static constexpr uint8_t kMaxYeardaySchedulesPerUser = 1;
 static constexpr uint8_t kMaxHolidaySchedules        = 1;
 static constexpr uint8_t kMaxCredentialSize          = 16;
 
-static constexpr uint16_t kMaxCredentials = kMaxUsers * kMaxCredentialsPerUser;
+// Only Programming PIN (type 0) and PIN (type 1) are advertised.
+static constexpr uint16_t kSupportedCredentialTypes = 2;
+static constexpr uint16_t kMaxCredentials = kSupportedCredentialTypes * kMaxCredentialsPerUser;
 } // namespace ResourceRanges
 
 namespace LockInitParams {
