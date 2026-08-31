@@ -4,3 +4,4 @@ build-*/
 release/
 sdkconfig
 sdkconfig.old
+.tmp-*

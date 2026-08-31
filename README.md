@@ -18,7 +18,7 @@ The project deliberately uses UART1 on GPIO6/GPIO7 so the board's native USB con
 
 - Matter Door Lock device over Thread
 - BLE commissioning + OpenThread networking
-- Matter user management with persistent users and PIN credentials
+- Matter user management with 20 persistent users, 20 PIN slots, and up to 3 credentials linked per user
 - Matter Power Source child endpoint with battery percentage from Tuya DP10
 - Configurable auto-relock attribute
 - Tuya wake sequence with fixed 0x55AA sequence

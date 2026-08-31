@@ -216,6 +216,15 @@ extern "C" void app_main()
     cluster::door_lock::feature::credential_over_the_air_access::config_t cota_config;
     cluster::door_lock::feature::pin_credential::config_t pin_config;
     cluster::door_lock::feature::user::config_t user_config;
+    cota_config.require_pin_for_remote_operation = false;
+    pin_config.number_pin_users_supported = 20;
+    pin_config.min_pin_code_length = 4;
+    pin_config.max_pin_code_length = 8;
+    pin_config.wrong_code_entry_limit = 5;
+    pin_config.user_code_temporary_disable_time = 60;
+    pin_config.require_pin_for_remote_operation = false;
+    user_config.number_of_total_user_supported = 20;
+    user_config.number_of_credentials_supported_per_user = 3;
     ABORT_APP_ON_FAILURE(
         cluster::door_lock::feature::credential_over_the_air_access::add(door_lock_cluster, &cota_config) == ESP_OK,
         ESP_LOGE(TAG, "Failed to enable credential-over-the-air access"));
