@@ -148,14 +148,9 @@ extern "C" void app_main()
     err = esp_matter::start(app_event_cb);
     ABORT_APP_ON_FAILURE(err == ESP_OK, ESP_LOGE(TAG, "Matter start failed: %d", err));
 
-    // Print Matter commissioning setup code
-    chip::CommissioningWindowManager &commissioningWindowManager = chip::Server::GetInstance().GetCommissioningWindowManager();
     ESP_LOGI(TAG, "=== MATTER COMMISSIONING ===");
-    ESP_LOGI(TAG, "Setup Code (Manual): %u-%03u-%04u", 
-             (chip::DeviceLayer::ConfigurationMgr().GetSetupPinCode() / 1000000),
-             ((chip::DeviceLayer::ConfigurationMgr().GetSetupPinCode() / 1000) % 1000),
-             (chip::DeviceLayer::ConfigurationMgr().GetSetupPinCode() % 1000));
-    ESP_LOGI(TAG, "Discriminator: %u", chip::DeviceLayer::ConfigurationMgr().GetSetupDiscriminator());
+    ESP_LOGI(TAG, "Device is ready for commissioning via BLE");
+    ESP_LOGI(TAG, "Look for setup code in serial output above");
     ESP_LOGI(TAG, "===========================");
 
     err = tuya_lock_bridge_init(physical_state_cb, nullptr);
