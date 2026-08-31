@@ -236,7 +236,10 @@ extern "C" void app_main()
     endpoint::set_parent_endpoint(power_endpoint, endpoint);
     s_power_source_endpoint_id = endpoint::get_id(power_endpoint);
     cluster_t *power_cluster = cluster::get(power_endpoint, PowerSource::Id);
-    cluster::power_source::attribute::create_bat_percent_remaining(power_cluster, nullable<uint8_t>());
+    cluster::power_source::attribute::create_bat_percent_remaining(
+        power_cluster, nullable<uint8_t>(),
+        nullable<uint8_t>(static_cast<uint8_t>(0)),
+        nullable<uint8_t>(static_cast<uint8_t>(200)));
     cluster::power_source::attribute::create_bat_present(power_cluster, true);
     ESP_LOGI(TAG, "Battery Power Source endpoint=%u", s_power_source_endpoint_id);
 
